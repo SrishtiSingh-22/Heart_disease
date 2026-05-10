@@ -1,0 +1,24 @@
+{
+  "model_name": "Logistic Regression",
+  "accuracy": 73.77,
+  "features": [
+    "age",
+    "sex",
+    "cp",
+    "trestbps",
+    "chol",
+    "fbs",
+    "restecg",
+    "thalach",
+    "exang",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal"
+  ],
+  "all_accuracies": {
+    "Logistic Regression": 73.77,
+    "Decision Tree": 65.57,
+    "Random Forest": 72.13
+  }
+}

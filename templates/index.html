@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Heart Disease Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #0a0d12;
+    --bg2:       #111520;
+    --bg3:       #181d28;
+    --border:    #1e2535;
+    --border2:   #2a3145;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --accent:    #f43f5e;
+    --accent2:   #fb7185;
+    --green:     #10b981;
+    --yellow:    #f59e0b;
+    --blue:      #3b82f6;
+    --glow-r:    rgba(244,63,94,0.15);
+    --glow-g:    rgba(16,185,129,0.15);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background grid ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(244,63,94,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244,63,94,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── Header ── */
+  header { text-align: center; margin-bottom: 56px; }
+  .pulse-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 72px; height: 72px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(244,63,94,0.2) 0%, transparent 70%);
+    margin-bottom: 20px; position: relative;
+  }
+  .pulse-icon::after {
+    content: '';
+    position: absolute; inset: -8px; border-radius: 50%;
+    border: 1px solid rgba(244,63,94,0.3);
+    animation: ripple 2.4s ease-out infinite;
+  }
+  @keyframes ripple {
+    0%   { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  .pulse-icon svg { width: 36px; height: 36px; }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  h1 span { color: var(--accent2); font-style: italic; }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+  }
+
+  .model-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 18px;
+    padding: 6px 14px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+  .model-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 24px;
+  }
+  .card-title {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Form Grid ── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+
+  .field { display: flex; flex-direction: column; gap: 7px; }
+
+  label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  label .hint {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 300;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #374151;
+    margin-top: 2px;
+  }
+
+  input, select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(244,63,94,0.12);
+  }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+  /* ── Submit button ── */
+  .btn-wrap { margin-top: 32px; display: flex; justify-content: center; }
+  .btn-predict {
+    position: relative;
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 16px 52px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 24px rgba(244,63,94,0.4);
+  }
+  .btn-predict:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(244,63,94,0.5); }
+  .btn-predict:active { transform: translateY(0); }
+  .btn-predict:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .btn-predict .spinner {
+    display: none; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  }
+  .btn-predict.loading .btn-text { opacity: 0; }
+  .btn-predict.loading .spinner { display: block; }
+  @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+  /* ── Result Card ── */
+  #result-card {
+    display: none;
+    background: var(--bg2);
+    border-radius: 20px;
+    padding: 36px;
+    text-align: center;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+  #result-card.low      { border-color: rgba(16,185,129,0.5);  background: linear-gradient(160deg, var(--bg2) 60%, rgba(16,185,129,0.07)); }
+  #result-card.moderate { border-color: rgba(245,158,11,0.5);  background: linear-gradient(160deg, var(--bg2) 60%, rgba(245,158,11,0.07)); }
+  #result-card.high     { border-color: rgba(244,63,94,0.5);   background: linear-gradient(160deg, var(--bg2) 60%, rgba(244,63,94,0.07)); }
+
+  .result-icon { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+  .risk-label {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.6rem;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+  .low  .risk-label { color: var(--green); }
+  .moderate .risk-label { color: var(--yellow); }
+  .high .risk-label { color: var(--accent2); }
+
+  .risk-prob {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* Probability bar */
+  .prob-bar-wrap { max-width: 380px; margin: 0 auto 24px; }
+  .prob-bar-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+  .prob-bar-track { height: 8px; background: var(--border); border-radius: 100px; overflow: hidden; }
+  .prob-bar-fill  { height: 100%; border-radius: 100px; transition: width 0.8s cubic-bezier(.22,1,.36,1); }
+  .low  .prob-bar-fill { background: var(--green); }
+  .moderate .prob-bar-fill { background: var(--yellow); }
+  .high .prob-bar-fill { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+  .result-advice {
+    max-width: 480px; margin: 0 auto;
+    font-size: 0.9rem; color: var(--muted); line-height: 1.7;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Error ── */
+  #error-msg {
+    display: none; padding: 14px 18px; border-radius: 12px;
+    background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3);
+    color: var(--accent2); font-size: 0.88rem; margin-bottom: 20px;
+  }
+
+  /* ── Info section ── */
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-top: 8px; }
+  .info-tile {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; text-align: center;
+  }
+  .info-tile .val { font-family:'DM Mono',monospace; font-size: 1.4rem; font-weight: 500; color: #fff; }
+  .info-tile .lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+
+  /* ── Help tooltip ── */
+  .help-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--border2); border: none;
+    color: var(--muted); font-size: 11px; font-weight: 700;
+    cursor: pointer; margin-left: 6px; vertical-align: middle;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0;
+    font-family: 'Outfit', sans-serif;
+  }
+  .help-btn:hover { background: var(--accent); color: #fff; }
+
+  .help-popup-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 1000;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .help-popup-overlay.active { display: flex; }
+
+  .help-popup {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 20px; padding: 28px; max-width: 420px; width: 100%;
+    animation: fadeUp 0.25s ease;
+  }
+  .hp-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .hp-icon { font-size: 2rem; }
+  .hp-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: #fff; }
+  .hp-code  { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+  .hp-section { margin-bottom: 14px; }
+  .hp-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; }
+  .hp-value { font-size: 0.88rem; color: var(--text); line-height: 1.6; white-space: pre-line; }
+  .hp-tip {
+    background: var(--bg3); border-radius: 10px; padding: 12px 14px;
+    font-size: 0.82rem; color: var(--muted); line-height: 1.7;
+    border-left: 3px solid var(--accent); white-space: pre-line;
+  }
+  .hp-close {
+    width: 100%; margin-top: 18px; padding: 11px;
+    background: var(--border2); border: none; border-radius: 10px;
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .hp-close:hover { background: var(--border); }
+
+  /* ── Colored range bar ── */
+  .range-wrap { margin: 10px 0 4px; }
+  .range-track { height: 6px; background: var(--border); border-radius: 100px; position: relative; overflow: hidden; }
+  .range-danger { position: absolute; inset: 0; background: rgba(244,63,94,0.3); }
+  .range-safe   { position: absolute; top: 0; height: 100%; background: rgba(16,185,129,0.7); border-radius: 100px; }
+  .range-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── EKG line animation ── */
+  .ekg-wrap { overflow: hidden; height: 32px; margin: 32px 0 0; opacity: 0.25; }
+  .ekg-line { animation: ekg-move 3s linear infinite; }
+  @keyframes ekg-move { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="pulse-icon">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 31s-13-8.4-13-17a7 7 0 0 1 13-3.5A7 7 0 0 1 31 14c0 8.6-13 17-13 17z" fill="rgba(244,63,94,0.3)" stroke="#f43f5e" stroke-width="1.5"/>
+        <polyline points="4,18 8,18 11,10 14,26 17,16 20,20 23,18 32,18" stroke="#f43f5e" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1>Heart <span>Risk</span> Predictor</h1>
+    <p class="subtitle">Enter patient parameters below for AI-powered cardiac risk assessment</p>
+    <div class="model-badge">
+      <span class="dot"></span>
+      <span id="badge-text">Model loading...</span>
+    </div>
+  </header>
+
+  <!-- Error -->
+  <div id="error-msg"></div>
+
+  <!-- Result -->
+  <div id="result-card">
+    <span class="result-icon" id="result-icon"></span>
+    <div class="risk-label" id="risk-label"></div>
+    <div class="risk-prob" id="risk-prob"></div>
+    <div class="prob-bar-wrap">
+      <div class="prob-bar-label"><span>0%</span><span>Risk probability</span><span>100%</span></div>
+      <div class="prob-bar-track"><div class="prob-bar-fill" id="prob-bar" style="width:0%"></div></div>
+    </div>
+    <div class="result-advice" id="result-advice"></div>
+  </div>
+
+  <!-- Form -->
+  <div class="card">
+    <div class="card-title">Patient Parameters</div>
+    <form id="predict-form">
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Umar (Age) <span class="hint">Years mein</span><button type="button" class="help-btn" onclick="showHelp('age')">?</button></label>
+          <input type="number" name="age" min="1" max="120" placeholder="e.g. 54" required/>
+        </div>
+
+        <div class="field">
+          <label>Ling (Sex) <span class="hint">Male ya Female</span><button type="button" class="help-btn" onclick="showHelp('sex')">?</button></label>
+          <select name="sex" required>
+            <option value="" disabled selected>-- Chunein --</option>
+            <option value="1">Male (Purush / Mard)</option>
+            <option value="0">Female (Mahila / Aurat)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Seene ka Dard (Chest Pain) <span class="hint">Kis tarah ka dard?</span><button type="button" class="help-btn" onclick="showHelp('cp')">?</button></label>
+          <select name="cp" required>
+            <option value="" disabled selected>-- Chest pain ka type chunein --</option>
+            <option value="0">0 – Typical Angina (mehnat par seene mein dard)</option>
+            <option value="1">1 – Atypical Angina (alag tarah ka seene ka dard)</option>
+            <option value="2">2 – Non-anginal (dard hai, heart se nahi)</option>
+            <option value="3">3 – Asymptomatic (koi dard nahi hota)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Blood Pressure (BP) <span class="hint">Upar wala number, mm Hg</span><button type="button" class="help-btn" onclick="showHelp('trestbps')">?</button></label>
+          <input type="number" name="trestbps" min="60" max="250" placeholder="jaise 120" required/>
+        </div>
+
+        <div class="field">
+          <label>Cholesterol <span class="hint">Khoon mein fat, mg/dL</span><button type="button" class="help-btn" onclick="showHelp('chol')">?</button></label>
+          <input type="number" name="chol" min="50" max="700" placeholder="jaise 200" required/>
+        </div>
+
+        <div class="field">
+          <label>Khaali Pet Sugar (Fasting Sugar) <span class="hint">120 se zyada hai?</span><button type="button" class="help-btn" onclick="showHelp('fbs')">?</button></label>
+          <select name="fbs" required>
+            <option value="" disabled selected>-- Chunein --</option>
+            <option value="1">Haan – Sugar zyada hai (120 mg/dl se upar)</option>
+            <option value="0">Nahi – Sugar normal hai (120 mg/dl ya kam)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>ECG Report Result <span class="hint">Heart ki electrical test</span><button type="button" class="help-btn" onclick="showHelp('restecg')">?</button></label>
+          <select name="restecg" required>
+            <option value="" disabled selected>-- ECG result chunein --</option>
+            <option value="0">0 – Normal (sab theek hai)</option>
+            <option value="1">1 – ST-T Abnormality (thodi gadbad, doctor ne bataya)</option>
+            <option value="2">2 – LV Hypertrophy (heart thoda bada hua, doctor ne bataya)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Maximum Heart Rate <span class="hint">Exercise mein max dhadkan</span><button type="button" class="help-btn" onclick="showHelp('thalach')">?</button></label>
+          <input type="number" name="thalach" min="50" max="250" placeholder="220 - aapki umar" required/>
+        </div>
+
+        <div class="field">
+          <label>Mehnat par Dard? (Exercise Angina) <span class="hint">Chadhai/daud par dard?</span><button type="button" class="help-btn" onclick="showHelp('exang')">?</button></label>
+          <select name="exang" required>
+            <option value="" disabled selected>-- Chunein --</option>
+            <option value="1">Haan – Mehnat/exercise par dard hota hai</option>
+            <option value="0">Nahi – Koi dard nahi hota</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>ST Depression <span class="hint">ECG report mein value</span><button type="button" class="help-btn" onclick="showHelp('oldpeak')">?</button></label>
+          <input type="number" name="oldpeak" min="0" max="10" step="0.1" placeholder="pata nahi toh 0 likhein" required/>
+        </div>
+
+        <div class="field">
+          <label>ECG Line ka Direction (Slope) <span class="hint">ECG report mein hota hai</span><button type="button" class="help-btn" onclick="showHelp('slope')">?</button></label>
+          <select name="slope" required>
+            <option value="" disabled selected>-- ECG slope chunein --</option>
+            <option value="0">0 – Upsloping (line upar jaati hai – better)</option>
+            <option value="1">1 – Flat (line seedhi hai – common)</option>
+            <option value="2">2 – Downsloping (line neeche jaati hai – risk)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Block Nasson ki Sankhya (CA) <span class="hint">Angiography se pata chalta hai</span><button type="button" class="help-btn" onclick="showHelp('ca')">?</button></label>
+          <select name="ca" required>
+            <option value="" disabled selected>-- Kitni naseein block hain --</option>
+            <option value="0">0 – Koi blockage nahi (normal)</option>
+            <option value="1">1 – Ek nass mein blockage</option>
+            <option value="2">2 – Do nasson mein blockage</option>
+            <option value="3">3 – Teen nasson mein blockage</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Blood Disorder Type (Thalassemia) <span class="hint">Blood test se pata chalta hai</span><button type="button" class="help-btn" onclick="showHelp('thal')">?</button></label>
+          <select name="thal" required>
+            <option value="" disabled selected>-- Blood type chunein --</option>
+            <option value="1">1 – Normal (koi problem nahi)</option>
+            <option value="2">2 – Fixed Defect (permanent kami – doctor ne bataya)</option>
+            <option value="3">3 – Reversible Defect (thodi kami – theek ho sakti hai)</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="btn-wrap">
+        <button type="submit" class="btn-predict" id="predict-btn">
+          <span class="btn-text">Analyze Risk</span>
+          <span class="spinner"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Model info tiles -->
+  <div class="card">
+    <div class="card-title">Model Information</div>
+    <div class="info-grid" id="info-tiles">
+      <div class="info-tile"><div class="val" id="inf-acc">—</div><div class="lbl">Accuracy</div></div>
+      <div class="info-tile"><div class="val" id="inf-model">—</div><div class="lbl">Algorithm</div></div>
+      <div class="info-tile"><div class="val">13</div><div class="lbl">Features</div></div>
+      <div class="info-tile"><div class="val">UCI</div><div class="lbl">Dataset</div></div>
+    </div>
+  </div>
+
+  <!-- EKG decoration -->
+  <div class="ekg-wrap" aria-hidden="true">
+    <svg class="ekg-line" width="200%" height="32" viewBox="0 0 1400 32">
+      <polyline fill="none" stroke="#f43f5e" stroke-width="1.5"
+        points="0,16 80,16 100,4 115,28 130,16 145,20 160,16 240,16
+                320,16 340,4 355,28 370,16 385,20 400,16 480,16
+                560,16 580,4 595,28 610,16 625,20 640,16 720,16
+                800,16 820,4 835,28 850,16 865,20 880,16 960,16
+                1040,16 1060,4 1075,28 1090,16 1105,20 1120,16 1200,16
+                1280,16 1300,4 1315,28 1330,16 1345,20 1360,16 1400,16"/>
+    </svg>
+  </div>
+
+</div>
+
+<!-- Help Popup -->
+<div class="help-popup-overlay" id="help-overlay" onclick="closeHelp(event)">
+  <div class="help-popup" id="help-popup">
+    <div class="hp-header">
+      <span class="hp-icon" id="hp-icon"></span>
+      <div>
+        <div class="hp-title" id="hp-title"></div>
+        <div class="hp-code"  id="hp-code"></div>
+      </div>
+    </div>
+    <div class="hp-section">
+      <div class="hp-label">Kya hota hai ye?</div>
+      <div class="hp-value" id="hp-short"></div>
+    </div>
+    <div class="hp-section">
+      <div class="hp-label">Test / value kahan se milegi?</div>
+      <div class="hp-value" id="hp-kahan"></div>
+    </div>
+    <div class="hp-section">
+      <div class="hp-label">Normal range</div>
+      <div class="hp-value" id="hp-normal"></div>
+      <div class="range-wrap" id="hp-bar-wrap" style="display:none">
+        <div class="range-track">
+          <div class="range-danger"></div>
+          <div class="range-safe" id="hp-bar-fill"></div>
+        </div>
+        <div class="range-labels" id="hp-bar-labels"></div>
+      </div>
+    </div>
+    <div class="hp-tip" id="hp-tip"></div>
+    <button class="hp-close" onclick="document.getElementById('help-overlay').classList.remove('active')">Samajh gaya / Got it</button>
+  </div>
+</div>
+
+<script>
+const FIELD_INFO = {
+  age:      { icon:"🎂", name:"Age (Umar)", short:"Aapki umar — sirf years mein likhna hai.", kahan:"Aapko pata hi hai! Birth certificate / Aadhar card dekho.", normal:"Koi bhi real umar chalegi. 29–77 years ka dataset hai.", range:null, tip:"Tip: Ye sabse aasaan field hai — bas apni umar likhdo.\nE.g. 45 saal ke hain toh 45 likhdo." },
+  sex:      { icon:"⚧", name:"Sex (Ling)", short:"Biological sex — Male ya Female.", kahan:"Dropdown mein sirf select karna hai.", normal:"Male = 1, Female = 0", range:null, tip:"Tip: Male ko statistically heart disease ka thoda zyada risk hota hai. Ye just biological factor hai — model isko ek input ki tarah use karta hai." },
+  cp:       { icon:"💢", name:"Chest Pain Type", short:"Seene mein dard ka type — 4 types hote hain.", kahan:"Patient se directly pucho ya doctor ki report mein hota hai.", normal:"0 = Typical Angina (classic dard)\n1 = Atypical Angina (alag dard)\n2 = Non-anginal (heart nahi)\n3 = Asymptomatic (koi dard nahi)", range:null, tip:"Seedha pucho:\n'Seene mein dard hota hai? Mehnat par badh jaata hai?'\nHaan + mehnat par → Type 0 ya 1\nDard hai par mehnat se nahi → Type 2\nKoi dard nahi → Type 3" },
+  trestbps: { icon:"🩺", name:"Resting Blood Pressure", short:"Araam mein BP — mm Hg mein.", kahan:"BP machine se — chemist, clinic, ya ghar par. Subah uthke baithe baithe measure karo.", normal:"Normal: 90–120 mm Hg\nBorderline: 120–139\nHigh: 140+", range:{min:90,max:200,safe:[90,130]}, tip:"Upper number (Systolic) enter karo — jaise 120/80 mein 120.\nRs 300–500 mein BP machine aati hai.\nSubah naashte se pehle check karo — zyada accurate hota hai." },
+  chol:     { icon:"🧈", name:"Cholesterol", short:"Khoon mein fat (lipid) ka level.", kahan:"'Lipid Profile' blood test se — Rs 200–500 mein kisi bhi lab mein.\n12 ghante pehle kuch mat khao (khaali pet test).", normal:"Normal: 150–200 mg/dL\nBorderline: 200–239 mg/dL\nHigh: 240+ mg/dL", range:{min:100,max:400,safe:[150,200]}, tip:"Report mein 'Total Cholesterol' wali value daalo.\nLDL, HDL alag hota hai — woh nahi chahiye.\nAgar pehle test hua ho toh purani report bhi chalegi." },
+  fbs:      { icon:"🍬", name:"Fasting Blood Sugar", short:"Khaali pet sugar 120 mg/dL se zyada hai ya nahi.", kahan:"Glucometer se ghar par ya lab mein — subah uthke 8 ghante baad.\nRs 10–20 mein chemist par ho jaata hai.", normal:"Normal: 70–100 mg/dL\nPre-diabetes: 100–125\nDiabetes: 126+\n\n120 se zyada → 'Yes' select karo\n120 ya kam → 'No' select karo", range:{min:60,max:250,safe:[70,120]}, tip:"Sirf Yes/No enter karna hai — exact number nahi.\nSubah uthke paani ke siwa kuch mat piya ho tab check karo.\nGlucometer chemist par Rs 500–1500 mein milta hai." },
+  restecg:  { icon:"📈", name:"Resting ECG", short:"Araam ki halat mein ECG result.", kahan:"ECG test clinic/hospital mein hota hai — Rs 100–300 mein.\nReport mein 'Interpretation' ya 'Conclusion' section dekho.", normal:"0 = Normal\n1 = ST-T wave abnormality\n2 = Left ventricular hypertrophy", range:null, tip:"Doctor se pucho: 'ECG normal hai?'\nHaan → 0 daalo\nKoi abnormality hai → 1 daalo\nLV hypertrophy → 2 daalo\nAgar ECG nahi hua → default 0 daalo." },
+  thalach:  { icon:"💓", name:"Maximum Heart Rate", short:"Exercise mein maximum heart rate (beats/minute).", kahan:"Stress test / treadmill test mein milta hai.\nYa formula use karo: 220 minus aapki umar.", normal:"Formula: 220 - Age\n50 saal → 170 bpm target\n60 saal → 160 bpm target\nKam heart rate = zyada risk", range:{min:60,max:220,safe:[100,185]}, tip:"Test nahi hua? Koi baat nahi!\nFormula: 220 - Umar\n45 saal ke hain → 220 - 45 = 175 daalo\nYe approximate hai — bilkul chalega." },
+  exang:    { icon:"🏃", name:"Exercise Angina", short:"Exercise / mehnat karne par seene mein dard ya tightness.", kahan:"Patient se seedha pucho.", normal:"Haan → Yes (1)\nNahi → No (0)", range:null, tip:"Ye pucho:\n'Seedhi chadhaai chadne, tez chalne,\nya koi mehnat karne par seene mein dard,\ntightness ya bhaari pan hota hai?'\nHaan → Yes\nNahi → No" },
+  oldpeak:  { icon:"📉", name:"ST Depression (Oldpeak)", short:"ECG mein ST segment neeche kitna gaya.", kahan:"ECG ya Stress test report mein 'ST depression' ya 'oldpeak' column mein.", normal:"Normal: 0–1 mm\nMild: 1–2 mm\nHigh risk: 2+ mm", range:{min:0,max:6,safe:[0,1]}, tip:"ECG report nahi hai? → 0 daalo (no depression)\nReport hai? → Doctor se pucho 'ST depression kitna hai?'\nDecimal value bhi enter ho sakti hai — jaise 1.5" },
+  slope:    { icon:"📊", name:"Slope of ST Segment", short:"Exercise peak par ECG ki line ka direction.", kahan:"Stress test / ECG report mein — ya doctor se pucho.", normal:"0 = Upsloping (better)\n1 = Flat (common)\n2 = Downsloping (risk)", range:null, tip:"Ye thoda technical hai.\nAgar nahi pata → 1 (Flat) daalo — ye sabse common hota hai.\nAgar stress test hua hai toh report mein 'ST slope' column dekho." },
+  ca:       { icon:"🔬", name:"Major Vessels (CA)", short:"Angiography mein kitni arteries block dikhin — 0 se 3.", kahan:"Coronary Angiography report mein — ye hospital mein hota hai.\nAgar angiography nahi hui → 0 daalo.", normal:"0 = Koi blockage nahi\n1 = Ek vessel\n2 = Do vessels\n3 = Teen vessels", range:null, tip:"Ye advanced test hai — aam taur par heart attack\nya badi problem ke baad hota hai.\nAgar patient healthy hai ya pehli baar check ho raha hai → 0 daalo.\nAngiography report hai → 'Number of vessels' value daalo." },
+  thal:     { icon:"🧬", name:"Thalassemia", short:"Blood disorder type — heart risk se correlated.", kahan:"Blood test / family history / doctor se confirm karo.", normal:"1 = Normal\n2 = Fixed defect\n3 = Reversible defect", range:null, tip:"Zyaatar logon mein 1 (Normal) hota hai.\nAgar medical history nahi pata → 1 daalo.\nYe rare condition hai — sirf tabhi alag value daalo jab doctor ne confirm kiya ho." }
+};
+
+function showHelp(code) {
+  const f = FIELD_INFO[code];
+  if (!f) return;
+  document.getElementById('hp-icon').textContent  = f.icon;
+  document.getElementById('hp-title').textContent = f.name;
+  document.getElementById('hp-code').textContent  = code;
+  document.getElementById('hp-short').textContent = f.short;
+  document.getElementById('hp-kahan').textContent = f.kahan;
+  document.getElementById('hp-normal').textContent = f.normal;
+  document.getElementById('hp-tip').textContent   = f.tip;
+
+  const barWrap = document.getElementById('hp-bar-wrap');
+  if (f.range) {
+    const r = f.range;
+    const pct = (v) => ((v - r.min) / (r.max - r.min) * 100).toFixed(1);
+    const fill = document.getElementById('hp-bar-fill');
+    fill.style.left  = pct(r.safe[0]) + '%';
+    fill.style.width = (pct(r.safe[1]) - pct(r.safe[0])) + '%';
+    document.getElementById('hp-bar-labels').innerHTML =
+      `<span>${r.min}</span><span style="color:#10b981;font-size:11px">✓ Safe</span><span>${r.max}</span>`;
+    barWrap.style.display = 'block';
+  } else {
+    barWrap.style.display = 'none';
+  }
+  document.getElementById('help-overlay').classList.add('active');
+}
+function closeHelp(e) {
+  if (e.target === document.getElementById('help-overlay'))
+    document.getElementById('help-overlay').classList.remove('active');
+}
+
+// ── Load model info on startup ──
+fetch('/model-info')
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('badge-text').textContent =
+      `${d.model_name} · ${d.accuracy}% accuracy`;
+    document.getElementById('inf-acc').textContent   = d.accuracy + '%';
+    document.getElementById('inf-model').textContent =
+      d.model_name.includes('Logistic') ? 'Log. Reg.' :
+      d.model_name.includes('Forest')   ? 'R. Forest' : 'Dec. Tree';
+  })
+  .catch(() => {
+    document.getElementById('badge-text').textContent = 'Model ready';
+  });
+
+// ── Form submit ──
+document.getElementById('predict-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const btn    = document.getElementById('predict-btn');
+  const errDiv = document.getElementById('error-msg');
+  const resCard = document.getElementById('result-card');
+
+  errDiv.style.display = 'none';
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  // Collect form data
+  const fd   = new FormData(e.target);
+  const data = {};
+  fd.forEach((v, k) => data[k] = v);
+
+  try {
+    const resp = await fetch('/predict', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify(data)
+    });
+    const result = await resp.json();
+
+    if (result.error) throw new Error(result.error);
+
+    showResult(result);
+
+  } catch (err) {
+    errDiv.textContent = '⚠ ' + (err.message || 'Prediction failed. Is Flask running?');
+    errDiv.style.display = 'block';
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+});
+
+function showResult(r) {
+  const card = document.getElementById('result-card');
+
+  // Set class
+  card.className = r.risk_class;
+  card.style.display = 'block';
+
+  // Icon
+  const icons = { low: '💚', moderate: '⚠️', high: '🚨' };
+  document.getElementById('result-icon').textContent = icons[r.risk_class];
+
+  // Label
+  document.getElementById('risk-label').textContent = r.risk_level;
+
+  // Probability text
+  document.getElementById('risk-prob').textContent =
+    `Heart disease probability: ${r.probability}%  ·  Model: ${r.model_used}`;
+
+  // Bar (animate after paint)
+  const bar = document.getElementById('prob-bar');
+  bar.style.width = '0%';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      bar.style.width = r.probability + '%';
+    });
+  });
+
+  // Advice
+  const advice = {
+    low:      '✅ Parameters suggest low cardiac risk. Maintain a healthy lifestyle — regular exercise, balanced diet, and routine check-ups are recommended.',
+    moderate: '⚠️ Some risk factors are elevated. Consult a cardiologist for a detailed evaluation and consider lifestyle modifications.',
+    high:     '🔴 Multiple high-risk indicators detected. Please seek immediate medical consultation. Do not use this as a substitute for professional diagnosis.'
+  };
+  document.getElementById('result-advice').textContent = advice[r.risk_class];
+
+  // Scroll into view
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+</script>
+</body>
+</html>
